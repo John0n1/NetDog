@@ -73,7 +73,7 @@ A comprehensive network reconnaissance and security assessment tool built with m
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-username/netdog.git
+   git clone https://github.com/John0n1/netdog.git
    cd netdog
    ```
 
@@ -271,6 +271,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Made for the cybersecurity community**
 
-[Star this repo](https://github.com/your-username/netdog) | [Report Bug](https://github.com/your-username/netdog/issues) | [Request Feature](https://github.com/your-username/netdog/discussions)
+[Star this repo](https://github.com/John0n1/netdog) | [Report Bug](https://github.com/John0n1/netdog/issues) | [Request Feature](https://github.com/John0n1/netdog/discussions)
 
 </div>
