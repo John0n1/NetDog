@@ -1,0 +1,88 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+dist/
+.vite/
+.next/
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# IDE & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.vim/
+.sublime-*
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+pgdata/
+
+# Logs
+logs/
+*.log
+celery.log
+redis.log
+
+# OS Generated
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# Security & Secrets
+*.pem
+*.key
+secrets/
+certs/
+
+# Scan Results & Reports
+scans/
+reports/
+output/
+temp/
+
+# Runtime
+*.pid
+*.sock
+
+# Backup files
+*.bak
+*.tmp
+*.orig
