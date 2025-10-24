@@ -100,6 +100,11 @@ export const devices = {
   get: (id) => api.get(`/api/v1/device/${id}`),
 }
 
+// Metrics
+export const metrics = {
+  overview: () => api.get('/api/v1/metrics/overview'),
+}
+
 // Vulnerabilities
 export const vulnerabilities = {
   list: (params) => api.get('/api/v1/vulns', { params }),

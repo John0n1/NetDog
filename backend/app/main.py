@@ -6,6 +6,7 @@ import structlog
 from app.config import get_settings
 from app.database import init_db
 from app.api import scans, devices, vulnerabilities, netutil, auth, logs
+from app.api import metrics
 
 settings = get_settings()
 logger = structlog.get_logger()
@@ -46,6 +47,7 @@ app.include_router(devices.router, prefix="/api/v1", tags=["Devices"])
 app.include_router(vulnerabilities.router, prefix="/api/v1", tags=["Vulnerabilities"])
 app.include_router(netutil.router, prefix="/api/v1/netutil", tags=["Network Utilities"])
 app.include_router(logs.router, prefix="/api/v1", tags=["Logs"])
+app.include_router(metrics.router, prefix="/api/v1", tags=["Metrics"])
 
 
 @app.get("/")

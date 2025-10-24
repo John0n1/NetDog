@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Play, Clock, CheckCircle, AlertCircle, Trash2, Wifi, Activity, Shield, Monitor, Smartphone, Tv, Router, Server, HardDrive, Loader } from 'lucide-react'
-import { scans, netutil, devices } from '../api'
+import { useState } from 'react'
+import { Play, Clock, CheckCircle, AlertCircle, Trash2, Wifi, Activity, Monitor, Smartphone, Tv, Router, Server, HardDrive, Loader, ShieldAlert, BarChart3, Users, Gauge } from 'lucide-react'
+import { scans, netutil, devices, metrics } from '../api'
 import { formatDistanceToNow } from 'date-fns'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
@@ -32,7 +32,17 @@ const DeviceCard = ({ device, isScanning }) => {
     return 'text-green-400 bg-green-900'
   }
 
+  const getOsDisplay = () => {
+    if (device.os_guess) return device.os_guess
+    if (device.vendor) return `Likely ${device.vendor}`
+    if (isScanning) return 'Fingerprinting...'
+    return 'Unknown'
+  }
+
   const isEnriching = isScanning && (!device.os_guess || !device.open_ports || device.open_ports.length === 0)
+  const osDisplay = getOsDisplay()
+  const osIsFallback = !device.os_guess
+  const osIsInferred = osDisplay.toLowerCase().includes('fingerprint')
 
   return (
     <div className="card hover:bg-dark-hover transition-all duration-200 relative">
@@ -73,14 +83,23 @@ const DeviceCard = ({ device, isScanning }) => {
                 {device.device_type || 'Detecting...'}
               </span>
             </div>
-            
-            {device.os_guess && (
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">OS:</span>
-                <span className="truncate max-w-48">{device.os_guess}</span>
+
+            <div className="flex items-center justify-between">
+              <span className="text-gray-400">OS:</span>
+              <div className="flex items-center space-x-2">
+                <span
+                  className={`truncate max-w-48 ${osIsFallback ? 'italic text-gray-400' : ''} ${
+                    isEnriching && osIsFallback ? 'animate-pulse' : ''
+                  }`}
+                >
+                  {osDisplay}
+                </span>
+                {osIsInferred && (
+                  <span className="text-[10px] uppercase tracking-wide text-blue-300">Inferred</span>
+                )}
               </div>
-            )}
-            
+            </div>
+
             {device.mac_address && (
               <div className="flex items-center justify-between">
                 <span className="text-gray-400">MAC:</span>
@@ -136,8 +155,17 @@ const ScanDevicesPage = () => {
     mode: 'normal',
   })
   const [deletingId, setDeletingId] = useState(null)
-  
+
   const queryClient = useQueryClient()
+
+  const { data: overviewMetrics = null, isFetching: metricsLoading } = useQuery({
+    queryKey: ['metrics', 'overview'],
+    queryFn: async () => {
+      const response = await metrics.overview()
+      return response.data
+    },
+    refetchInterval: 10000,
+  })
 
   // Get network info
   const { data: myNetwork } = useQuery({
@@ -173,6 +201,38 @@ const ScanDevicesPage = () => {
   })
 
   const isActiveScanning = mostRecentScan?.status === 'running' || mostRecentScan?.status === 'discovering' || mostRecentScan?.status === 'profiling'
+
+  const riskDistribution = overviewMetrics?.risk_distribution ?? {
+    critical: 0,
+    high: 0,
+    medium: 0,
+    low: 0,
+    unknown: 0,
+  }
+
+  const totalRiskDevices = Object.values(riskDistribution).reduce((sum, value) => sum + value, 0)
+
+  const renderMetricValue = (value, { precision = 0, suffix = '' } = {}) => {
+    if (metricsLoading && !overviewMetrics) {
+      return <div className="h-6 bg-dark-bg animate-pulse rounded w-16" />
+    }
+
+    if (value === null || value === undefined) {
+      return <span className="text-gray-500">—</span>
+    }
+
+    const formatted =
+      typeof value === 'number' && precision > 0
+        ? value.toFixed(precision)
+        : value
+
+    return (
+      <span className="text-2xl font-semibold text-white">
+        {formatted}
+        {suffix}
+      </span>
+    )
+  }
 
   // Create scan mutation
   const createScan = useMutation({
@@ -238,6 +298,153 @@ const ScanDevicesPage = () => {
 
   return (
     <div className="max-w-7xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+        <div className="card relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-400">Total Scans</p>
+              {renderMetricValue(overviewMetrics?.total_scans)}
+            </div>
+            <BarChart3 className="w-10 h-10 text-blue-accent opacity-70" />
+          </div>
+          <p className="mt-2 text-xs text-gray-500">
+            {overviewMetrics?.completed_scans || 0} completed scans in history
+          </p>
+        </div>
+
+        <div className="card relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-400">Active Scans</p>
+              {renderMetricValue(overviewMetrics?.active_scans)}
+            </div>
+            <Activity className={`w-10 h-10 ${overviewMetrics?.active_scans ? 'text-green-400 animate-pulse' : 'text-gray-500'}`} />
+          </div>
+          <p className="mt-2 text-xs text-gray-500">
+            Monitoring {overviewMetrics?.recent_scan?.targets?.[0] ? overviewMetrics.recent_scan.targets.slice(0, 2).join(', ') : 'network targets'}
+          </p>
+        </div>
+
+        <div className="card relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-400">Monitored Devices</p>
+              {renderMetricValue(overviewMetrics?.total_devices)}
+            </div>
+            <Users className="w-10 h-10 text-purple-300 opacity-70" />
+          </div>
+          <p className="mt-2 text-xs text-gray-500">
+            {overviewMetrics?.new_devices_24h || 0} new devices seen in last 24h
+          </p>
+        </div>
+
+        <div className="card relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-400">High Risk Devices</p>
+              {renderMetricValue(overviewMetrics?.high_risk_devices)}
+            </div>
+            <ShieldAlert className="w-10 h-10 text-red-400 opacity-70" />
+          </div>
+          <p className="mt-2 text-xs text-gray-500">
+            {overviewMetrics?.critical_vulnerabilities || 0} critical vulnerabilities tracked
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        <div className="card lg:col-span-2">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Risk Distribution</h2>
+            {overviewMetrics?.last_updated && (
+              <span className="text-xs text-gray-500">
+                Updated {formatDistanceToNow(new Date(overviewMetrics.last_updated), { addSuffix: true })}
+              </span>
+            )}
+          </div>
+
+          {totalRiskDevices === 0 ? (
+            <p className="text-sm text-gray-500">No device risk data yet. Start a scan to build your inventory.</p>
+          ) : (
+            <div>
+              <div className="flex h-3 overflow-hidden rounded bg-dark-bg">
+                {[
+                  { key: 'critical', color: 'bg-red-500' },
+                  { key: 'high', color: 'bg-orange-400' },
+                  { key: 'medium', color: 'bg-yellow-400' },
+                  { key: 'low', color: 'bg-green-400' },
+                  { key: 'unknown', color: 'bg-gray-500' },
+                ].map(({ key, color }) => {
+                  const value = riskDistribution[key]
+                  if (!value) return null
+                  const width = `${Math.max((value / totalRiskDevices) * 100, 3)}%`
+                  return <div key={key} className={`${color} transition-all duration-500`} style={{ width }} />
+                })}
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4 text-sm">
+                {[
+                  { label: 'Critical', key: 'critical', color: 'text-red-300' },
+                  { label: 'High', key: 'high', color: 'text-orange-300' },
+                  { label: 'Medium', key: 'medium', color: 'text-yellow-300' },
+                  { label: 'Low', key: 'low', color: 'text-green-300' },
+                  { label: 'Unknown', key: 'unknown', color: 'text-gray-400' },
+                ].map(({ label, key, color }) => (
+                  <div key={key} className="flex items-center space-x-2">
+                    <span className={`inline-flex h-2 w-2 rounded-full ${color.replace('text', 'bg')}`} />
+                    <span className="text-gray-400">{label}</span>
+                    <span className="font-mono text-sm text-white">{riskDistribution[key]}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="card space-y-4">
+          <div>
+            <p className="text-sm text-gray-400">Average Risk Score</p>
+            <div className="flex items-center space-x-3 mt-2">
+              {metricsLoading && !overviewMetrics ? (
+                <div className="h-10 w-10 rounded-full bg-dark-bg animate-pulse" />
+              ) : (
+                <div className="p-2 rounded-full bg-dark-bg">
+                  <Gauge className="w-6 h-6 text-blue-accent" />
+                </div>
+              )}
+              <div>
+                <div className="text-2xl font-semibold">
+                  {overviewMetrics?.average_risk_score !== undefined && overviewMetrics?.average_risk_score !== null
+                    ? overviewMetrics.average_risk_score.toFixed(1)
+                    : '—'}
+                </div>
+                <p className="text-xs text-gray-500">Scaled 0 - 10</p>
+              </div>
+            </div>
+          </div>
+
+          {overviewMetrics?.recent_scan ? (
+            <div className="border border-dark-border rounded-lg p-3">
+              <p className="text-sm text-gray-400 mb-1">Most Recent Scan</p>
+              <p className="font-semibold text-white truncate">{overviewMetrics.recent_scan.targets.join(', ')}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {formatDistanceToNow(new Date(overviewMetrics.recent_scan.started_at), { addSuffix: true })}
+                {' • '}
+                Mode: <span className="uppercase">{overviewMetrics.recent_scan.mode}</span>
+              </p>
+              {overviewMetrics.recent_scan.result_summary && (
+                <p className="text-xs text-gray-500 mt-1">
+                  {overviewMetrics.recent_scan.result_summary?.hosts_found || 0} hosts · {overviewMetrics.recent_scan.result_summary?.vulns_found || 0} vulns
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="border border-dashed border-dark-border rounded-lg p-3 text-sm text-gray-500">
+              No scans yet. Launch your first scan to populate insights.
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

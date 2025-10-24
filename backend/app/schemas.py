@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 from datetime import datetime
 from uuid import UUID
 from typing import List, Optional, Dict, Any
@@ -50,7 +50,32 @@ class ScanListItem(BaseModel):
     started_at: datetime
     finished_at: Optional[datetime]
     result_summary: Optional[Dict[str, Any]]
-    
+
+    class Config:
+        from_attributes = True
+
+
+class RiskBreakdown(BaseModel):
+    critical: int = 0
+    high: int = 0
+    medium: int = 0
+    low: int = 0
+    unknown: int = 0
+
+
+class DashboardOverview(BaseModel):
+    total_scans: int
+    active_scans: int
+    completed_scans: int
+    total_devices: int
+    new_devices_24h: int
+    high_risk_devices: int
+    critical_vulnerabilities: int
+    average_risk_score: Optional[float] = None
+    risk_distribution: RiskBreakdown
+    recent_scan: Optional[ScanListItem] = None
+    last_updated: datetime
+
     class Config:
         from_attributes = True
 
