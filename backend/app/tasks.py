@@ -914,7 +914,7 @@ async def _enrich_device_async(task, scan_id: str, device_id: str, ip: str, mode
                     timeout=45  # quicker service detection
                 )
 
-                if fallback_result.returncode == 0 or fallback_result.stdout:
+                if fallback_result.returncode == 0 or (fallback_result.stdout and fallback_result.stdout.strip()):
                     host_data = parse_nmap_output(fallback_result.stdout)
                     if fallback_result.returncode == 0:
                         await publish_log(scan_id, "INFO", "enricher", f"Service scan successful for {ip}")
